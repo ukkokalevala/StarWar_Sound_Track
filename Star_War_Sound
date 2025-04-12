@@ -1,0 +1,78 @@
+#include "pitches.h"
+
+#define BUTTON_PIN 7
+#define BUZZER_PIN 8
+
+int starWarsTheme[] = {
+  NOTE_A4, NOTE_A4, NOTE_A4, NOTE_F4, NOTE_C5, NOTE_A4, NOTE_F4, NOTE_C5, NOTE_A4, 0,
+  NOTE_E5, NOTE_E5, NOTE_E5, NOTE_F5, NOTE_C5, NOTE_GS4, NOTE_F4, NOTE_C5, NOTE_A4, 0,
+  NOTE_A5, NOTE_A4, NOTE_A4, NOTE_A5, NOTE_GS5, NOTE_G5, NOTE_FS5, NOTE_F5, NOTE_FS5, 0,
+  NOTE_AS4, NOTE_DS5, NOTE_D5, NOTE_CS5, NOTE_C5, NOTE_B4, NOTE_C5, 0, NOTE_F4, NOTE_GS4, NOTE_F4, NOTE_A4, NOTE_C5, NOTE_A4, NOTE_C5, NOTE_E5, 0,
+  NOTE_A5, NOTE_A4, NOTE_A4, NOTE_A5, NOTE_GS5, NOTE_G5, NOTE_FS5, NOTE_F5, NOTE_FS5, 0,
+  NOTE_AS4, NOTE_DS5, NOTE_D5, NOTE_CS5, NOTE_C5, NOTE_B4, NOTE_C5, 0, NOTE_F4, NOTE_GS4, NOTE_F4, NOTE_C5, NOTE_A4, NOTE_F4, NOTE_C5, NOTE_A4, 0
+};
+
+int starWarsThemeDurations[] = {
+  500, 500, 500, 350, 150, 500, 350, 150, 650, 500,
+  500, 500, 500, 350, 150, 500, 350, 150, 650, 500,
+  500, 300, 150, 500, 325, 175, 125, 125, 250, 325,
+  250, 500, 325, 175, 125, 125, 250, 350, 250, 500, 350, 125, 500, 375, 125, 650, 500,
+  500, 300, 150, 500, 325, 175, 125, 125, 250, 325,
+  250, 500, 325, 175, 125, 125, 250, 350, 250, 500, 350, 125, 500, 375, 125, 650, 500
+};
+
+bool isPlaying = true;
+bool lastButtonState = HIGH;
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 50;
+
+int currentNote = 0;
+unsigned long noteStartTime = 0;
+bool notePlaying = false;
+
+void setup() {
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // <== IMPORTANT
+  pinMode(BUZZER_PIN, OUTPUT);
+}
+
+void loop() {
+  // === BUTTON HANDLING (active LOW) ===
+  bool buttonState = digitalRead(BUTTON_PIN);
+  if (buttonState != lastButtonState) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (buttonState == LOW && lastButtonState == HIGH) {
+      isPlaying = !isPlaying;
+      noTone(BUZZER_PIN);
+      notePlaying = false; // reset note
+    }
+    lastButtonState = buttonState;
+  }
+
+  // === NON-BLOCKING PLAYBACK ===
+  if (isPlaying && !notePlaying && millis() - noteStartTime > 0) {
+    int note = starWarsTheme[currentNote];
+    int duration = starWarsThemeDurations[currentNote];
+
+    if (note == 0) {
+      noTone(BUZZER_PIN);
+    } else {
+      tone(BUZZER_PIN, note, duration);
+    }
+
+    noteStartTime = millis();
+    notePlaying = true;
+  }
+
+  if (notePlaying && millis() - noteStartTime >= starWarsThemeDurations[currentNote] * 1.3) {
+    noTone(BUZZER_PIN);
+    currentNote++;
+    notePlaying = false;
+
+    if (currentNote >= sizeof(starWarsTheme) / sizeof(int)) {
+      currentNote = 0; // loop
+    }
+  }
+}
